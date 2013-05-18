@@ -1,0 +1,15 @@
+{
+  "name": "application-name",
+  "version": "0.0.1",
+  "private": true,
+  "scripts": {
+    "start": "node planterss"
+  },
+  "dependencies": {
+    "express": "latest",
+    "express-resource": "latest",
+    "validator": "latest",
+    "passport-oauth": "latest",
+    "jade": "*"
+  }
+}

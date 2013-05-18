@@ -1,0 +1,9 @@
+extends layout
+
+block content
+  div
+    form(action='/users', method='post')
+        label(for='json') json
+            textarea(id='json',cols='50',rows='10',value='',placeholder='',name='json')
+        input(type='submit',value='Sign Up')
+    

@@ -1,0 +1,40 @@
+{
+  "name": "planterss-engine",
+  "version": "0.0.1",
+  "description": "one server for one user. Application stores Engine for developer SNS",
+  "keywords": [
+    "sns",
+    "application stores",
+    "oauth",
+    "json"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git://github.com/otspace0715/planterSS-engine.git"
+  },
+  "bugs": {
+    "url": "http://github.com/otspace0715/planterSS-engine/issues"
+  },
+  "author": {
+    "name": "otspace0715",
+    "email": "otspace0715@gmail.com",
+    "url": "http://philo-sophia-ot.blogspot.jp/"
+  },
+  "licenses": [
+    {
+      "type": "MIT",
+      "url": "http://www.opensource.org/licenses/MIT"
+    }
+  ],
+  "main": "./lib/planterss-engine",
+  "dependencies": {
+    "validator": "0.4.28",
+    "oauth2-provider": "1.3.0",
+  },
+  "engines": {
+    "node": ">= 0.8.9"
+  },
+  "readme": "# planterSS-engine\n\n\n",
+  "_id": "planterSS-engine@0.0.1",
+  "_from": "planterSS-engine@latest"
+}

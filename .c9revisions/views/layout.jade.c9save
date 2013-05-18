@@ -1,0 +1,1 @@
+{"ts":1364370956690,"silentsave":true,"restoring":false,"patch":[[{"diffs":[[1,"doctype 5\r\nhtml\r\n  head\r\n    title= title\r\n    link(rel='stylesheet', href='/stylesheets/style.css')\r\n  body\r\n    block content"]],"start1":0,"start2":0,"length1":0,"length2":127}]],"length":127}
