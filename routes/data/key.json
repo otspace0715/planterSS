@@ -1,0 +1,1 @@
+{"crypt_key":"encryption secret","sign_key":"signing secret","login_uri":"/login","secret_uri":"/secret","signup_uri":"/settings","clients":{"planterss":"planterss secret"}}

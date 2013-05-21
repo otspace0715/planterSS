@@ -1,8 +1,10 @@
 /**
  * Module dependencies.
  */
-var OAuth2Provider = require('oauth2-provider').OAuth2Provider
+var express = require('express')
+  , OAuth2Provider = require('oauth2-provider').OAuth2Provider
   , EventEmitter = require('events').EventEmitter
+  , app = express.application
   , fs = require('fs');
 
 var myOAP = function(){};
@@ -11,15 +13,19 @@ var myClients = {};
 // temporary grant storage
 var myGrants = {};
 
+var myOptions = {};
+
+var myApp = function(){};
+
 function Provider(){
 }
 
 Provider.prototype = new EventEmitter();
 
-Provider.prototype.createProvider = function(dataPath, defaultKey){
-    
-    this.options = defaultKey;
-    myClients = this.options.clients;
+Provider.prototype.createProvider = function(dataPath, defaultKey, app){
+    myOptions = defaultKey;
+    myApp = app;
+    myClients = myOptions.clients;
     myGrants = {};
 
     if (!fs.existsSync(dataPath)) {
@@ -29,16 +35,16 @@ Provider.prototype.createProvider = function(dataPath, defaultKey){
         fs.writeFileSync(dataPath + '/key.json', JSON.stringify(defaultKey) + '\n');
     }
 
-    this.options = JSON.parse(fs.readFileSync(dataPath + '/key.json'));
-    myClients = this.options.clients;
-    myOAP = new OAuth2Provider(this.options);
+    myOptions = JSON.parse(fs.readFileSync(dataPath + '/key.json'));
+    myClients = myOptions.clients;
+    myOAP = new OAuth2Provider(myOptions);
 
     // before showing setup page, make sure the user is made in
     myOAP.on('enforce_setup', function(req, res, authorize_url, next) {
       if (fs.existsSync(dataPath + '/iam.json')) {
         next(req.session.user);
       } else {
-        res.writeHead(303, {Location: '/setup?next=' + encodeURIComponent(authorize_url)});
+        res.writeHead(303, {Location: myOptions.signup_uri + '?next=' + encodeURIComponent(authorize_url)});
         res.end();
       }
     });
@@ -48,7 +54,7 @@ Provider.prototype.createProvider = function(dataPath, defaultKey){
       if(req.session.user) {
         next(req.session.user);
       } else {
-        res.writeHead(303, {Location: '/login?next=' + encodeURIComponent(authorize_url)});
+        res.writeHead(303, {Location: myOptions.login_uri + '?next=' + encodeURIComponent(authorize_url)});
         res.end();
       }
     });
@@ -129,7 +135,17 @@ Provider.prototype.createProvider = function(dataPath, defaultKey){
 };
 
 Provider.prototype.oauth = function() {
-    return myOAP.oauth();
+    var oauth = myOAP.oauth();
+    myApp.get('/secret', function(req, res, next) {
+        if(req.session.user) {
+            res.end('proceed to secret lair, extra data: ' + JSON.stringify(req.session.data));
+        } else {
+            res.writeHead(403);
+            res.end('no');
+        }
+    });
+
+    return oauth;
 };
 
 Provider.prototype.signup = function() {
@@ -167,7 +183,35 @@ Provider.prototype.signup = function() {
 };
 
 Provider.prototype.login = function() {
-    return myOAP.login();
+    var login = myOAP.login();
+    myApp.get('/login', function(req, res, next) {
+        if(req.session.user) {
+            res.writeHead(303, {Location: '/'});
+            return res.end();
+        }
+
+        var next_url = req.query.next ? req.query.next : '/';
+    
+        // jade format 
+        res.render('login', {  title: 'PlanterSS Login', next_url: next_url });
+        // res.end('<html><form method="post" action="/login"><input type="hidden" name="next" value="' + next_url + '"><input type="text" placeholder="username" name="username"><input type="password" placeholder="password" name="password"><button type="submit">Login</button></form>');
+    });
+
+    myApp.post('/login', function(req, res, next) {
+        req.session.user = req.body.username;
+
+        res.writeHead(303, {Location: req.body.next || '/'});
+        res.end();
+    });
+
+    myApp.get('/logout', function(req, res, next) {
+        req.session.destroy(function(err) {
+            res.writeHead(303, {Location: '/'});
+            res.end();
+        });
+    });
+
+    return login;
 };
 
 /**

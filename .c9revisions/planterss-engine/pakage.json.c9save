@@ -88,3 +88,4 @@
 {"contributors":[],"silentsave":true,"ts":1365578509037,"patch":[[{"diffs":[[0,"1.3.0\",\n"],[1,"    \"oauth2-provider\": \"1.3.0\",\n"],[0,"  },\n  \""]],"start1":762,"start2":762,"length1":16,"length2":48}]],"length":964,"saved":false}
 {"ts":1365578524795,"patch":[[{"diffs":[[0,".3.0\",\n    \""],[-1,"oauth2-provider"],[1,"mkdirp"],[0,"\": \"1.3.0\",\n"]],"start1":763,"start2":763,"length1":39,"length2":30}]],"length":955,"saved":false}
 {"ts":1365578632981,"patch":[[{"diffs":[[0," \"mkdirp\": \""],[-1,"1.3.0"],[1,"0.3.5"],[0,"\",\n  },\n  \"e"]],"start1":773,"start2":773,"length1":29,"length2":29}]],"length":955,"saved":false}
+{"contributors":[],"silentsave":true,"ts":1369120418572,"patch":[[{"diffs":[[0,"0\",\n"],[-1,"    \"mkdirp\": \"0.3.5\",\n"],[0,"  },"]],"start1":766,"start2":766,"length1":31,"length2":8}]],"length":932,"saved":false}
