@@ -1,0 +1,5 @@
+{
+    "authorize": {"title": "PlanterSS Authorize"},
+    "login": {"title": "PlanterSS Welcome!!", "button": "Log In", "username": "username", "password": "password"},
+    "signup": {"title": "New PlanterSS admin", "button": "Sign Up", "email": "e-mail", "username": "username", "password": "password", "password2": "Confirmation password", "client_id": "Client ID"}
+}

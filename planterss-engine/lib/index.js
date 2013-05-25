@@ -8,4 +8,3 @@
 var Provider = require('./oauth2/provider');
 
 exports = module.exports = new Provider();
-

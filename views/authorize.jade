@@ -1,0 +1,9 @@
+extends layout
+
+block content
+    div=this app wants to access your account...
+    div
+        form(action='#{authorize_url}', method='post')
+            button(name='allow') Allow
+            button(name='deny') Deny
+    

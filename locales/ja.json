@@ -1,0 +1,5 @@
+{
+    "authorize": {"title": "PlanterSS 認証"},
+    "login": {"title": "PlanterSS ようこそ！！", "button": "ログイン", "username": "ユーザー名", "password": "パスワード"},
+    "signup": {"title": "新しい PlanterSS 管理者", "button": "サインアップ", "email": "メールアドレス", "username": "ユーザー名", "password": "パスワード", "password2": "確認パスワード", "client_id": "クライアントID"}
+}

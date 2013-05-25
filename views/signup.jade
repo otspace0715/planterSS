@@ -1,0 +1,14 @@
+extends layout
+
+block content
+  div
+    form(action='/signup', method='post')
+        input(type='hidden', name='next', value='#{next_url}' )
+        input(type='text', name='email', placeholder='#{email}' )
+        input(type='text', name='username', placeholder='#{username}' )
+        input(type='password', name='password', placeholder='#{password}' )
+        input(type='password', name='password2', placeholder='#{password2}' )
+        input(type='text', name='client_id', placeholder='#{client_id}' )
+        input(type='submit',value='#{button}')
+        div=errors
+    

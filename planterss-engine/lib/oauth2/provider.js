@@ -1,13 +1,16 @@
 /**
  * Module dependencies.
  */
-var express = require('express')
-  , OAuth2Provider = require('oauth2-provider').OAuth2Provider
+var OAuth2Provider = require('oauth2-provider').OAuth2Provider
   , EventEmitter = require('events').EventEmitter
-  , app = express.application
+  , Validator = require('validator').Validator
+  , i18n = require("i18n")
   , fs = require('fs');
 
+var Provider = function(){};
 var myOAP = function(){};
+var myApp = function(){};
+
 // hardcoded list of <client id, client secret> tuples
 var myClients = {};
 // temporary grant storage
@@ -15,36 +18,54 @@ var myGrants = {};
 
 var myOptions = {};
 
-var myApp = function(){};
+var myKey = {};
 
-function Provider(){
-}
+var myLang = {};
 
+var validator = new Validator();
+var createErrors = null;
+
+myOptions.signup_uri = '/signup';
+myOptions.secret_uri = '/secret';
+myOptions.login_uri = '/login';
+myKey.crypt_key = 'encryption secret';
+myKey.sign_key = 'signing secret';
 Provider.prototype = new EventEmitter();
 
-Provider.prototype.createProvider = function(dataPath, defaultKey, app){
-    myOptions = defaultKey;
+Provider.prototype.createProvider = function(app){
     myApp = app;
-    myClients = myOptions.clients;
     myGrants = {};
+    i18n.configure({
+        // setup some locales - other locales default to en silently
+        locales:['en', 'ja'],
+    
+        // you may alter a site wide default locale
+        defaultLocale: 'ja',
+    
+        // sets a custom cookie name to parse locale settings from  - defaults to NULL
+        cookie: 'i18n-lang',
+    
+        // where to store json files - defaults to './locales'
+        directory: myApp.get('locales'),
+    
+        // whether to write new locale information to disk - defaults to true
+        // updateFiles: false,
+    
+        // setting extension of json files - defaults to '.json' (you might want to set this to '.js' according to webtranslateit)
+        // extension: '.js',
+    });
 
-    if (!fs.existsSync(dataPath)) {
-        fs.mkdirSync(dataPath, '0755');
-    }
-    if (!fs.existsSync(dataPath + '/key.json')) {
-        fs.writeFileSync(dataPath + '/key.json', JSON.stringify(defaultKey) + '\n');
-    }
-
-    myOptions = JSON.parse(fs.readFileSync(dataPath + '/key.json'));
-    myClients = myOptions.clients;
-    myOAP = new OAuth2Provider(myOptions);
+    myOAP = new OAuth2Provider(myKey);
+    myLang.authorize = i18n.__('authorize');
+    myLang.signup = i18n.__('signup');
+    myLang.login = i18n.__('login');
 
     // before showing setup page, make sure the user is made in
-    myOAP.on('enforce_setup', function(req, res, authorize_url, next) {
-      if (fs.existsSync(dataPath + '/iam.json')) {
-        next(req.session.user);
+    myOAP.on('enforce_setup', function(req, res, next) {
+      if (fs.existsSync(myApp.get('datapath') + '/iam.json')) {
+        next(req.session.client_id);
       } else {
-        res.writeHead(303, {Location: myOptions.signup_uri + '?next=' + encodeURIComponent(authorize_url)});
+        res.writeHead(303, {Location: myOptions.signup_uri });
         res.end();
       }
     });
@@ -62,7 +83,7 @@ Provider.prototype.createProvider = function(dataPath, defaultKey, app){
     // render the authorize form with the submission URL
     // use two submit buttons named "allow" and "deny" for the user's choice
     myOAP.on('authorize_form', function(req, res, client_id, authorize_url) {
-      res.end('<html>this app wants to access your account... <form method="post" action="' + authorize_url + '"><button name="allow">Allow</button><button name="deny">Deny</button></form>');
+        res.render('authorize',  {  title: myLang.authorize.title, authorize_url: authorize_url });
     });
     
     // save the generated grant code for the current user
@@ -134,9 +155,177 @@ Provider.prototype.createProvider = function(dataPath, defaultKey, app){
     });
 };
 
+Provider.prototype.signup = function() {
+    var self = this;
+    if (!fs.existsSync(myApp.get('datapath'))) {
+        fs.mkdirSync(myApp.get('datapath'), '0755');
+    }
+    var signup = function(req, res, next) {
+        var uri = ~req.url.indexOf('?') ? req.url.substr(0, req.url.indexOf('?')) : req.url;
+        if(req.method == 'GET' && (myOptions.signup_uri == uri)) {
+            // authorization form will be POSTed to same URL, so we'll have all params
+            var signup_url = req.url;
+            self.emit('enforce_signup', req, res, function(client_id) {
+
+                var authorize_url = '/oauth/authorize?client_id=planterss&redirect_uri=http://planterss.otspace.c9.io/settings/&response_type=token'
+                self.emit('enforce_login', req, res,  client_id, authorize_url);
+            });
+    
+        } else if(req.method == 'POST' && myOptions.signup_uri == uri) {
+        } else {
+            return next();
+        }
+    };
+    var iam = function(){
+        var words = "";
+        if (fs.existsSync(myApp.get('datapath') + '/iam.json')) {
+          try {
+            words = JSON.parse(fs.readFileSync(myApp.get('datapath') + '/iam.json'));
+          } catch (e) {
+              return words;
+          }
+          return words;
+        }
+        return words;
+    };
+
+    myApp.get(myOptions.signup_uri, function(req, res, next) {
+        var next_url = req.query.next ? req.query.next : '/';
+        if (!req.session.clients) {
+            if (!fs.existsSync(myApp.get('datapath') + '/clients.json')) {
+                var defaultKey = JSON.parse('{"client_id": {"id": "planterss"}, "clients":{"planterss":"planterss secret"}}');
+                if (defaultKey !== undefined) {
+                    fs.writeFileSync(myApp.get('datapath') + '/clients.json', JSON.stringify(defaultKey) + '\n');
+                }
+                res.render('signup', {
+                    title: myLang.signup.title,
+                    next_url: next_url,
+                    email: myLang.signup.email,
+                    username: myLang.signup.username,
+                    password: myLang.signup.password,
+                    password2: myLang.signup.password2,
+                    client_id: myLang.signup.client_id,
+                    button: myLang.signup.button,
+                    errors: '' });
+                    return;
+            }
+
+            myClients = JSON.parse(fs.readFileSync(myApp.get('datapath') + '/clients.json'));
+            req.session.clients = myClients.clients;
+
+            var words = iam(req, res);
+            if (words === "") {
+                res.render('signup', {
+                    title: myLang.signup.title,
+                    next_url: next_url,
+                    email: myLang.signup.email,
+                    username: myLang.signup.username,
+                    password: myLang.signup.password,
+                    password2: myLang.signup.password2,
+                    client_id: myLang.signup.client_id,
+                    button: myLang.signup.button,
+                    errors: '' });
+            }
+        }
+        return;
+    });
+    myApp.post(myOptions.signup_uri, function(req, res, next) {
+        var next_url = req.query.next ? req.query.next : '/';
+        createErrors = null;
+    
+        req.onValidationError = function(errback) {
+            req.onErrorCallback = errback;
+        };
+        var validationErrors = function() {
+            if (createErrors === undefined | createErrors === null) {
+              return null;
+            }
+            return createErrors;
+        };
+    
+        var check = function(param, value, fail_msg) {        
+            validator.error = function(msg) {
+              var error = {
+                param: param,
+                msg: msg,
+                value: value
+              };
+              if (createErrors === undefined | createErrors === null) {
+                createErrors = [];
+              }
+              createErrors.push(error);
+              if (req.onErrorCallback) {
+                req.onErrorCallback(msg);
+              }
+              return this;
+            };
+            return validator.check(value, fail_msg);
+        };
+    
+        var words = iam(req, res);
+        if (words === "") {
+            var data = null;
+            try {
+                data = JSON.parse(req.query);
+            } catch (erros) {
+                var msg = JSON.parse('{"json": "' + erros + '"}');
+                res.render('signup', {
+                    title: myLang.signup.title,
+                    next_url: next_url,
+                    email: myLang.signup.email,
+                    username: myLang.signup.username,
+                    password: myLang.signup.password,
+                    password2: myLang.signup.password2,
+                    client_id: myLang.signup.client_id,
+                    button: myLang.signup.button,
+                    errors: JSON.stringify(msg) });
+            }
+            if (data !== null) {
+                if (data.email === undefined) {
+                   check("email", "", 'email is empty').notEmpty();
+                }
+                if (data.password === undefined) {
+                    check("password", "", 'password is empty').notEmpty();
+                }
+                if (data.password2 === undefined) {
+                    check("confirm password2", "", 'confirm password is empty').notEmpty();
+                }
+                check("email", data.email, 'valid email required').len(6, 64).isEmail();
+                check("password", data.password, '8 to 20 characters required').len(8, 20);
+                check("confirm password", data.password2, 'password is incorrect').equals(data.password);
+                var errors = validationErrors();
+                if (errors) {
+                    res.render('signup', {
+                        title: myLang.signup.title,
+                        next_url: next_url,
+                        email: myLang.signup.email,
+                        username: myLang.signup.username,
+                        password: myLang.signup.password,
+                        password2: myLang.signup.password2,
+                        client_id: myLang.signup.client_id,
+                        button: myLang.signup.button,
+                        errors: JSON.stringify(errors) });
+                }
+                var fd = fs.openSync(self.myDataPath + '/iam.json', 'w');
+                fs.writeSync(fd, '{\n    "email": "' + data.email + '"\n}');
+                fs.closeSync(fd);
+                fd = fs.openSync(self.myDataPath + '/iam-password.json', 'w');
+                fs.writeSync(fd, '{\n    "password": "' + data.password + '"\n}');
+                fs.closeSync(fd);
+                fd = fs.openSync(self.myDataPath + '/clients.json', 'w');
+                fs.writeSync(fd, '{\n    "clients": "' + data.clients + '"\n}');
+                fs.closeSync(fd);
+            }
+        }
+        return;
+    });
+    
+    return signup;
+};
+
 Provider.prototype.oauth = function() {
     var oauth = myOAP.oauth();
-    myApp.get('/secret', function(req, res, next) {
+    myApp.get(myOptions.secret_uri, function(req, res, next) {
         if(req.session.user) {
             res.end('proceed to secret lair, extra data: ' + JSON.stringify(req.session.data));
         } else {
@@ -148,43 +337,9 @@ Provider.prototype.oauth = function() {
     return oauth;
 };
 
-Provider.prototype.signup = function() {
-  var self = myOAP;
-
-  return function(req, res, next) {
-    var data, atok, user_id, client_id, grant_date, extra_data;
-
-    if(req.query['access_token']) {
-      atok = req.query['access_token'];
-    } else if((req.headers['authorization'] || '').indexOf('Bearer ') === 0) {
-      atok = req.headers['authorization'].replace('Bearer', '').trim();
-    } else {
-      return next();
-    }
-
-    try {
-      data = self.serializer.parse(atok);
-      user_id = data[0];
-      client_id = data[1];
-      grant_date = new Date(data[2]);
-      extra_data = data[3];
-    } catch(e) {
-      res.writeHead(400);
-      return res.end(e.message);
-    }
-
-    self.emit('access_token', req, {
-      user_id: user_id,
-      client_id: client_id,
-      extra_data: extra_data,
-      grant_date: grant_date
-    }, next);
-  };
-};
-
 Provider.prototype.login = function() {
     var login = myOAP.login();
-    myApp.get('/login', function(req, res, next) {
+    myApp.get(myOptions.login_uri, function(req, res, next) {
         if(req.session.user) {
             res.writeHead(303, {Location: '/'});
             return res.end();
@@ -193,27 +348,31 @@ Provider.prototype.login = function() {
         var next_url = req.query.next ? req.query.next : '/';
     
         // jade format 
-        res.render('login', {  title: 'PlanterSS Login', next_url: next_url });
+        res.render('login', {
+            title: myLang.login.title,
+            next_url: next_url,
+            button: myLang.login.button,
+            username: myLang.login.username,
+            password: myLang.login.password});
         // res.end('<html><form method="post" action="/login"><input type="hidden" name="next" value="' + next_url + '"><input type="text" placeholder="username" name="username"><input type="password" placeholder="password" name="password"><button type="submit">Login</button></form>');
     });
 
-    myApp.post('/login', function(req, res, next) {
+    myApp.post(myOptions.login_uri, function(req, res, next) {
         req.session.user = req.body.username;
 
         res.writeHead(303, {Location: req.body.next || '/'});
-        res.end();
+        return res.end();
     });
 
     myApp.get('/logout', function(req, res, next) {
         req.session.destroy(function(err) {
             res.writeHead(303, {Location: '/'});
-            res.end();
+            return res.end();
         });
     });
 
     return login;
 };
-
 /**
  * Expose `Provider`.
  */ 

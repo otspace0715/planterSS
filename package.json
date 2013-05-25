@@ -8,8 +8,8 @@
   "dependencies": {
     "express": "latest",
     "express-resource": "latest",
-    "validator": "latest",
     "passport-oauth": "latest",
+    "i18n": "latest",
     "jade": "*"
   }
 }

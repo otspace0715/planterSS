@@ -5,8 +5,8 @@
 
 var express = require('express')
   , resource = require('express-resource')
+  , i18n = require("i18n")
   , routes = require('./routes')
-  , setting = require('./routes/setting')
   , planterssEngine = require('./planterss-engine/lib/')
   , http = require('http')
   , path = require('path');
@@ -28,24 +28,19 @@ app.configure(function(){
   app.use(express.methodOverride());
   app.use(app.router);
   app.use(express.static(path.join(__dirname, 'public')));
+  app.set('locales', __dirname + '/locales');
+  app.set('datapath', __dirname + '/routes/data');
+  planterssEngine.createProvider(app);
+  app.use(planterssEngine.signup());
+  app.use(planterssEngine.oauth());
+  app.use(planterssEngine.login());
 });
 
 app.configure('development', function(){
   app.use(express.errorHandler());
 });
 
-// json data path
-planterssEngine.createProvider(__dirname + '/routes/data', {crypt_key: 'encryption secret', sign_key: 'signing secret', login_uri: '/login', secret_uri: '/secret', signup_uri: '/settings', clients: {'planterss': 'planterss secret'}}, app);
-
-app.configure(function(){
-  app.use(planterssEngine.oauth());
-  app.use(planterssEngine.signup());
-  app.use(planterssEngine.login());
-});
-
 app.get('/', routes.index);
-
-app.resource('settings', setting, {id: 'id'});
 
 http.createServer(app).listen(app.get('port'), function(){
   console.log("Express server listening on port " + app.get('port'));
